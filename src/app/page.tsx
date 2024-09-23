@@ -1,9 +1,9 @@
-import { EnhancedSciFiTeddyAiAssistant } from "../components/ai";
+import { DefiChatbotSleek } from "../components/defi-chatbot-sleek";
 
 export default function Home() {
   return (
     <>
-      <EnhancedSciFiTeddyAiAssistant />
+      <DefiChatbotSleek />
       </>
   );
 }
