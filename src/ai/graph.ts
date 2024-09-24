@@ -115,14 +115,15 @@ export default function nodegraph() {
             apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
         });
 
-        const llmForcedToRenderBalance = llm.bindTools([renderBalanceTool], {
-            tool_choice: 'any',
+        const llmForcedToRenderBalance = llm.bind({
+            tools: [renderBalanceTool],
+            tool_choice: { type: "function", function: { name: "render_balance" } },
         });
 
-        const renderBalance = await llmForcedToRenderBalance.invoke(`this is the wallet address: ${walletAddress}`);
+        const renderBalance = await llmForcedToRenderBalance.invoke(`Fetch and render the balance for this wallet address: ${walletAddress}`);
         console.log(renderBalance, "this is render balance");
         return {
-            balanceRSC: renderBalance,
+            balanceRSC: renderBalance.content,
         }
     });
 
@@ -131,6 +132,8 @@ export default function nodegraph() {
     const data = graph.compile();
     return data;
 }
+
+
 
 
 

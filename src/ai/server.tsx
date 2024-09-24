@@ -27,7 +27,6 @@ export function streamRunnableUI<RunInput, RunOutput>(
 ) {
   const ui = createStreamableUI();
   const [lastEvent, resolve] = withResolvers<string>();
-  let skipTextChunks = false; // Flag to skip text chunks
 
   (async () => {
     let lastEventValue: StreamEvent | null = null;
@@ -38,7 +37,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
     > = {};
 
     for await (const streamEvent of (
-      runnable as CompiledStateGraph<RunInput, RunOutput>
+      runnable as Runnable<RunInput, RunOutput>
     ).streamEvents(inputs, {
       version: "v2",
     })) {
@@ -46,7 +45,6 @@ export function streamRunnableUI<RunInput, RunOutput>(
         streamEvent.name === CUSTOM_UI_YIELD_NAME &&
         isValidElement(streamEvent.data.output.value)
       ) {
-        skipTextChunks = true; // Set flag to skip text chunks
         if (streamEvent.data.output.type === "append") {
           ui.append(streamEvent.data.output.value);
         } else if (streamEvent.data.output.type === "update") {
@@ -54,12 +52,14 @@ export function streamRunnableUI<RunInput, RunOutput>(
         }
       }
 
-      if (!skipTextChunks && streamEvent.event === "on_chat_model_stream") {
+      if (streamEvent.event === "on_chat_model_stream") {
         const chunk = streamEvent.data.chunk;
         if ("text" in chunk && typeof chunk.text === "string") {
           if (!callbacks[streamEvent.run_id]) {
+            // the createStreamableValue / useStreamableValue is preferred
+            // as the stream events are updated immediately in the UI
+            // rather than being batched by React via createStreamableUI
             const textStream = createStreamableValue();
-            console.log("textStream is here you mf bis", textStream.value);
             ui.append(<AIMessage value={textStream.value} />);
             callbacks[streamEvent.run_id] = textStream;
           }
@@ -80,7 +80,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
     // Close the main UI stream for component streams yielded by tools.
     ui.done();
   })();
-  console.log(ui.value, lastEvent, "this is the UI value");
+
   return { ui: ui.value, lastEvent };
 }
 
@@ -117,6 +117,7 @@ export function withResolvers<T>() {
     resolve = res;
     reject = rej;
   });
+
 
   return [innerPromise, resolve, reject] as const;
 }
