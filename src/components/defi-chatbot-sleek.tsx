@@ -5,23 +5,39 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {  Send,Search} from 'lucide-react'
+import { Send, Search } from 'lucide-react'
+import { AIMessageText, HumanMessageText } from "@/components/ui/message"
+import { EndpointsContext } from '@/app/agent'
+import { useActions } from '@/ai/client'
 
 export function DefiChatbotSleek() {
-  const [chatHistory, setChatHistory] = useState([
-    { id: 1, text: "Welcome to the DeFi AI Chatbot! How can I assist you today?" },
-    { id: 2, text: "Hello! I'd like to know about the current ETH price." },
-    { id: 3, text: "As of now, the price of Ethereum (ETH) is $1,876.24. Is there anything specific you'd like to know about ETH or any other cryptocurrency?" },
-  ])
 
+  const actions = useActions<typeof EndpointsContext>();
   const [input, setInput] = useState("")
+  const [history, setHistory] = useState<[role: string, content: string][]>([ ["human", "Hello!"],
+    ["ai", "Hi there! How can I assist you today?"]]);
+  const [elements, setElements] = useState<JSX.Element[]>([]);
 
-  const handleSend = () => {
-    if (input.trim()) {
-      setChatHistory([...chatHistory, { id: chatHistory.length + 1, text: input }])
-      setInput("")
-    }
-  }
+  const handleSend = async () => { 
+    const newElements = [...elements];
+    const element = await actions.agent({
+      chat_history: history,
+      input: input
+    });
+
+    newElements.push(
+      <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
+        <HumanMessageText content={input} />
+        <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
+          {element.ui}
+        </div>
+      </div>
+    );
+
+    
+    setElements(newElements);
+    setInput("");
+  };
 
   return (
     <div className="flex h-screen bg-black text-white font-mono">
@@ -74,11 +90,7 @@ export function DefiChatbotSleek() {
           </div>
         </div>
         <ScrollArea className="flex-1 p-4">
-          {chatHistory.map((message) => (
-            <div key={message.id} className="mb-4">
-              <p className="bg-gray-900 p-2 inline-block">{message.text}</p>
-            </div>
-          ))}
+        <div className="flex flex-col w-full gap-1 mt-auto">{elements}</div>
         </ScrollArea>
         <div className="p-4 border-t border-gray-800">
           <div className="flex space-x-2">

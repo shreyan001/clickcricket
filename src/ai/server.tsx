@@ -1,13 +1,13 @@
 import "server-only";
 
 import { ReactNode, isValidElement } from "react";
-import { AIProvider } from "@/ai/client";
+import { AIProvider } from "./client";
 import { createStreamableUI, createStreamableValue } from "ai/rsc";
 import { Runnable } from "@langchain/core/runnables";
 import { CompiledStateGraph } from "@langchain/langgraph";
 import { StreamEvent } from "@langchain/core/tracers/log_stream";
 import { AIMessage } from "@/components/ui/message";
-import nodegraph from "@/ai/graph";
+
 export const dynamic = "force-dynamic";
 
 export const CUSTOM_UI_YIELD_NAME = "__yield_ui__";
@@ -27,6 +27,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
 ) {
   const ui = createStreamableUI();
   const [lastEvent, resolve] = withResolvers<string>();
+  let skipTextChunks = false; // Flag to skip text chunks
 
   (async () => {
     let lastEventValue: StreamEvent | null = null;
@@ -37,7 +38,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
     > = {};
 
     for await (const streamEvent of (
-      runnable as Runnable<RunInput, RunOutput>
+      runnable as CompiledStateGraph<RunInput, RunOutput>
     ).streamEvents(inputs, {
       version: "v2",
     })) {
@@ -45,6 +46,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
         streamEvent.name === CUSTOM_UI_YIELD_NAME &&
         isValidElement(streamEvent.data.output.value)
       ) {
+        skipTextChunks = true; // Set flag to skip text chunks
         if (streamEvent.data.output.type === "append") {
           ui.append(streamEvent.data.output.value);
         } else if (streamEvent.data.output.type === "update") {
@@ -52,14 +54,12 @@ export function streamRunnableUI<RunInput, RunOutput>(
         }
       }
 
-      if (streamEvent.event === "on_chat_model_stream") {
+      if (!skipTextChunks && streamEvent.event === "on_chat_model_stream") {
         const chunk = streamEvent.data.chunk;
         if ("text" in chunk && typeof chunk.text === "string") {
           if (!callbacks[streamEvent.run_id]) {
-            // the createStreamableValue / useStreamableValue is preferred
-            // as the stream events are updated immediately in the UI
-            // rather than being batched by React via createStreamableUI
             const textStream = createStreamableValue();
+            console.log("textStream is here you mf bis", textStream.value);
             ui.append(<AIMessage value={textStream.value} />);
             callbacks[streamEvent.run_id] = textStream;
           }
@@ -80,7 +80,7 @@ export function streamRunnableUI<RunInput, RunOutput>(
     // Close the main UI stream for component streams yielded by tools.
     ui.done();
   })();
-
+  console.log(ui.value, lastEvent, "this is the UI value");
   return { ui: ui.value, lastEvent };
 }
 
@@ -118,17 +118,5 @@ export function withResolvers<T>() {
     reject = rej;
   });
 
- 
   return [innerPromise, resolve, reject] as const;
 }
-
-async function agent(inputs: {
-  input: string;
-}) {
-  "use server"; 
-  let input = "input";
-
-  return streamRunnableUI(nodegraph(), {messages: [input]});
-}
-
-export const EndpointsContext = exposeEndpoints({ agent });
