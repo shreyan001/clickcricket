@@ -25,9 +25,9 @@ const convertChatHistoryToMessages = (
   }) {
     "use server"; 
 
-    return streamRunnableUI(nodegraph(), {
+    return streamRunnableUI({
       input: inputs.input,
-      chatHistory: convertChatHistoryToMessages(inputs.chat_history),
+      chat_history: convertChatHistoryToMessages(inputs.chat_history),
     });
   }
   

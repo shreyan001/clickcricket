@@ -4,7 +4,9 @@ import { BaseMessage, AIMessage, HumanMessage } from "@langchain/core/messages";
 import { START, END } from "@langchain/langgraph";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { ChatGroq } from "@langchain/groq";
-import { renderBalanceTool } from "./renderBalance";
+import renderBalance from "./renderBalance";
+import BalanceDisplay from './renderBalance';
+
 export const CUSTOM_UI_YIELD_NAME = "__yield_ui__";
 
 const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_ETH_RPC_URL);
@@ -16,7 +18,11 @@ type lazyState = {
     balanceRSC?: React.ReactNode | null,
     chatHistory?: BaseMessage[],
     messages?: any[] | null,
-    result?: string
+    result?: string,
+    balanceData?: {
+        address: string | null,
+        balance: string | null,
+    };
 }
 
 export default function nodegraph() {
@@ -34,7 +40,7 @@ export default function nodegraph() {
             walletAddress: {
                 value: null,
             },
-            balanceRSC: {
+            balanceData: {
                 value: null,
             },
             chatHistory: {
@@ -109,22 +115,22 @@ export default function nodegraph() {
 
     graph.addNode("fetch_balance_node", async (state: lazyState) => {
         const walletAddress = state.walletAddress || defaultWalletAddress;
-        const llm = new ChatGroq({
-            modelName: "Llama3-groq-8b-8192-tool-use-preview",
-            temperature: 0.7,
-            apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-        });
-
-        const llmForcedToRenderBalance = llm.bind({
-            tools: [renderBalanceTool],
-            tool_choice: { type: "function", function: { name: "render_balance" } },
-        });
-
-        const renderBalance = await llmForcedToRenderBalance.invoke(`Fetch and render the balance for this wallet address: ${walletAddress}`);
-        console.log(renderBalance, "this is render balance");
-        return {
-            balanceRSC: renderBalance.content,
+        let balanceInEth = null;
+        
+        try {
+            const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_ETH_RPC_URL);
+            const balance = await provider.getBalance(walletAddress);
+             balanceInEth = ethers.formatEther(balance);
+        } catch (error) {
+            console.error('Error fetching balance:', error);
         }
+
+        return {
+           balanceData: {
+            address: walletAddress,
+            balance: balanceInEth,
+           }
+        };
     });
 
     /* @ts-ignore */
@@ -132,8 +138,6 @@ export default function nodegraph() {
     const data = graph.compile();
     return data;
 }
-
-
 
 
 

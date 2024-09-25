@@ -1,100 +1,58 @@
-import "server-only";
+import { createStreamableUI } from 'ai/rsc';
+import nodegraph from './graph';
+import { AIMessageText, HumanMessageText } from "@/components/ui/message";
+import { ReactNode } from 'react';
+import { AIProvider } from './client';
+import { BaseMessage } from '@langchain/core/messages';
+import BalanceDisplay from './renderBalance';
+import { Runnable } from '@langchain/core/runnables';
 
-import { ReactNode, isValidElement } from "react";
-import { AIProvider } from "./client";
-import { createStreamableUI, createStreamableValue } from "ai/rsc";
-import { Runnable } from "@langchain/core/runnables";
-import { CompiledStateGraph } from "@langchain/langgraph";
-import { StreamEvent } from "@langchain/core/tracers/log_stream";
-import { AIMessage } from "@/components/ui/message";
+export async function streamRunnableUI({ chat_history, input }: { chat_history?: BaseMessage[], input: string }) {
+  const graph = nodegraph();
+  const stream = await graph.stream({ 
+    input,
+    chat_history,
+  });
 
-export const dynamic = "force-dynamic";
-
-export const CUSTOM_UI_YIELD_NAME = "__yield_ui__";
-
-/**
- * Executes `streamEvents` method on a runnable
- * and converts the generator to a RSC friendly stream
- *
- * @param runnable
- * @returns React node which can be sent to the client
- */
-export function streamRunnableUI<RunInput, RunOutput>(
-  runnable:
-    | Runnable<RunInput, RunOutput>
-    | CompiledStateGraph<RunInput, Partial<RunInput>>,
-  inputs: RunInput,
-) {
   const ui = createStreamableUI();
-  const [lastEvent, resolve] = withResolvers<string>();
 
-  (async () => {
-    let lastEventValue: StreamEvent | null = null;
+  const runnable = graph;
+  for await (const streamEvent of (
+    runnable as Runnable<any, any>
+  ).streamEvents({ input, chat_history }, {
+    version: "v2",
+  })) {
+        console.log('Stream event:', streamEvent);
+  }
+ 
+  for await (const value of stream) {
+    console.log('Stream value:', JSON.stringify(value, null, 10));
 
-    const callbacks: Record<
-      string,
-      ReturnType<typeof createStreamableUI | typeof createStreamableValue>
-    > = {};
+    const [nodeName, output] = Object.entries(value)[0];
+    console.log('Node name:', nodeName);
+    console.log('Output:', JSON.stringify(output, null, 2));
 
-    for await (const streamEvent of (
-      runnable as Runnable<RunInput, RunOutput>
-    ).streamEvents(inputs, {
-      version: "v2",
-    })) {
-      if (
-        streamEvent.name === CUSTOM_UI_YIELD_NAME &&
-        isValidElement(streamEvent.data.output.value)
-      ) {
-        if (streamEvent.data.output.type === "append") {
-          ui.append(streamEvent.data.output.value);
-        } else if (streamEvent.data.output.type === "update") {
-          ui.update(streamEvent.data.output.value);
-        }
-      }
-
-      if (streamEvent.event === "on_chat_model_stream") {
-        const chunk = streamEvent.data.chunk;
-        if ("text" in chunk && typeof chunk.text === "string") {
-          if (!callbacks[streamEvent.run_id]) {
-            // the createStreamableValue / useStreamableValue is preferred
-            // as the stream events are updated immediately in the UI
-            // rather than being batched by React via createStreamableUI
-            const textStream = createStreamableValue();
-            ui.append(<AIMessage value={textStream.value} />);
-            callbacks[streamEvent.run_id] = textStream;
-          }
-
-          callbacks[streamEvent.run_id].append(chunk.text);
-        }
-      }
-
-      lastEventValue = streamEvent;
+    // Add a loading indicator when the stream starts
+    if (nodeName === 'initial_node') {
+      ui.append(<div className="animate-pulse bg-gray-300 rounded-md p-2 w-24 h-6"></div>);
     }
+    if (nodeName !== 'end') {
+      if ((output as { result?: string }).result) {
+        ui.update(<AIMessageText content={(output as { result: string }).result} />);
+      }
+      if (nodeName === 'fetch_balance_node' && (output as any).balanceData) {
+        const { address } = (output as any).balanceData;
+        // Check if address is an object or string
+        const addressValue = typeof address === 'object' ? address.address : address;
+        ui.append(<BalanceDisplay address={addressValue} />);
+      }
+    }
+  }
 
-    // resolve the promise, allowing the client to continue
-    resolve(lastEventValue?.data.output);
-
-    // Close the UI stream for all text streams.
-    Object.values(callbacks).forEach((cb) => cb.done());
-
-    // Close the main UI stream for component streams yielded by tools.
-    ui.done();
-  })();
-
-  return { ui: ui.value, lastEvent };
+  ui.done();
+  return { ui: ui.value };
 }
 
-/**
- * Expose these endpoints outside for the client
- * We wrap the functions in order to properly resolve importing
- * client components.
- *
- * TODO: replace with createAI instead, even though that
- * implicitly handles state management
- *
- * See https://github.com/vercel/next.js/pull/59615
- * @param actions
- */
 export function exposeEndpoints<T extends Record<string, unknown>>(
   actions: T,
 ): {
@@ -104,20 +62,4 @@ export function exposeEndpoints<T extends Record<string, unknown>>(
   return async function AI(props: { children: ReactNode }) {
     return <AIProvider actions={actions}>{props.children}</AIProvider>;
   };
-}
-
-/**
- * Polyfill to emulate the upcoming Promise.withResolvers
- */
-export function withResolvers<T>() {
-  let resolve: (value: T) => void;
-  let reject: (reason?: any) => void;
-
-  const innerPromise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-
-  return [innerPromise, resolve, reject] as const;
 }

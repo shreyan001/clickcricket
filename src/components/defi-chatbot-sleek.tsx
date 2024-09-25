@@ -19,18 +19,22 @@ export function DefiChatbotSleek() {
   const [elements, setElements] = useState<JSX.Element[]>([]);
 
   const handleSend = async () => { 
-    const newElements = [...elements];
+    const newElements = [...elements]; 
+    
+    newElements.push(
+      <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
+        <HumanMessageText content={input} />
+      </div>
+    );
     const element = await actions.agent({
       chat_history: history,
       input: input
     });
 
+  
     newElements.push(
-      <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
-        <HumanMessageText content={input} />
-        <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
-          {element.ui}
-        </div>
+      <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
+        {element.ui}
       </div>
     );
 
