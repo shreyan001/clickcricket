@@ -1,9 +1,9 @@
-import { DefiChatbotSleek } from "../components/defi-chatbot-sleek";
+import { AgentsGuildInterface } from "../components/AgentsGuild";
 
 export default function Home() {
   return (
     <>
-      <DefiChatbotSleek />
+      <AgentsGuildInterface />
       </>
   );
 }

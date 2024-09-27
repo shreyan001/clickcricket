@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { headers } from 'next/headers';
+import { cookieToInitialState } from 'wagmi';
+import { config } from "@/walletConnect/siwe";
+import Web3ModalProvider from "@/walletConnect/WalletConnect";
 import { EndpointsContext } from "@/app/agent";
 
 const geistSans = localFont({
@@ -24,13 +28,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialState = cookieToInitialState(config, headers().get('cookie'));
   return (
     <html lang="en">
+          <Web3ModalProvider initialState={initialState}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       ><EndpointsContext>
         {children}</EndpointsContext>
-      </body>
+      </body></Web3ModalProvider>
     </html>
   );
 }
