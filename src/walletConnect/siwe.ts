@@ -7,10 +7,10 @@ import {
   } from '@web3modal/siwe';
   import { defaultWagmiConfig } from '@web3modal/wagmi/react/config';
   import { getCsrfToken, getSession, signIn, signOut } from 'next-auth/react';
-  
   import { cookieStorage, createStorage } from 'wagmi';
   import { baseSepolia} from 'wagmi/chains';
   import { createPublicClient,http } from 'viem';
+
   // Get projectId from https://cloud.walletconnect.com
   export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
   

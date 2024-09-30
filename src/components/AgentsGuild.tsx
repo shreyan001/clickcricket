@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -22,27 +22,49 @@ export function AgentsGuildInterface() {
   ]);
   const [elements, setElements] = useState<JSX.Element[]>([]);
 
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [elements]); // This will trigger whenever elements change
+
   const handleSend = async () => {
     const newElements = [...elements];
     
+    const humanMessageRef = React.createRef<HTMLDivElement>();
     newElements.push(
-      <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
+      <div className="flex flex-col items-end w-full gap-1 mt-auto" key={history.length} ref={humanMessageRef}>
         <HumanMessageText content={input} />
-      </div>
-    );
-    const element = await actions.agent({
-      chat_history: history,
-      input: input
-    });
-
-    newElements.push(
-      <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
-        {element.ui}
       </div>
     );
     
     setElements(newElements);
     setInput("");
+
+    // Scroll to the human message
+    setTimeout(() => {
+      humanMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    const element = await actions.agent({
+      chat_history: history,
+      input: input
+    });
+
+    const aiMessageRef = React.createRef<HTMLDivElement>();
+    setElements(prevElements => [
+      ...prevElements,
+      <div className="flex flex-col gap-1 w-full max-w-fit mr-auto" key={history.length + 1} ref={aiMessageRef}>
+        {element.ui}
+      </div>
+    ]);
+
+    // Scroll to show the top of the AI message
+    setTimeout(() => {
+      aiMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 2000);
   };
 
   return (
@@ -54,7 +76,7 @@ export function AgentsGuildInterface() {
         </div>
        <ConnectButton/>
       </nav>
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <div className="w-[30%] bg-[#FFC700] text-black p-4 flex flex-col">
           <h1 className="text-3xl font-bold mb-6">Agents Guild Dashboard</h1>
           <div className="mb-6">
@@ -98,8 +120,10 @@ export function AgentsGuildInterface() {
               </Button>
             </div>
           </div>
-          <ScrollArea className="flex-1 p-4">
-            <div className="flex flex-col w-full gap-1 mt-auto">{elements}</div>
+          <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-100px)]">
+            <div className="flex flex-col w-full gap-1 p-4">
+             {elements}
+            </div>
           </ScrollArea>
           <div className="p-4 border-t border-gray-800">
             <div className="flex space-x-2">

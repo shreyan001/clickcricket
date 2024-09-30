@@ -6,6 +6,7 @@ import { AIProvider } from './client';
 import { BaseMessage } from '@langchain/core/messages';
 import BalanceDisplay from './renderBalance';
 import { Runnable } from '@langchain/core/runnables';
+import { SmartContractDisplay } from '@/components/ui/ContractUI';
 
 export async function streamRunnableUI({ chat_history, input }: { chat_history?: BaseMessage[], input: string }) {
   const graph = nodegraph();
@@ -16,18 +17,10 @@ export async function streamRunnableUI({ chat_history, input }: { chat_history?:
 
   const ui = createStreamableUI();
 
-  const runnable = graph;
-  for await (const streamEvent of (
-    runnable as Runnable<any, any>
-  ).streamEvents({ input, chat_history }, {
-    version: "v2",
-  })) {
-        console.log('Stream event:', streamEvent);
-  }
- 
   for await (const value of stream) {
-    console.log('Stream value:', JSON.stringify(value, null, 10));
-
+    
+    
+   
     const [nodeName, output] = Object.entries(value)[0];
     console.log('Node name:', nodeName);
     console.log('Output:', JSON.stringify(output, null, 2));
@@ -40,11 +33,9 @@ export async function streamRunnableUI({ chat_history, input }: { chat_history?:
       if ((output as { result?: string }).result) {
         ui.update(<AIMessageText content={(output as { result: string }).result} />);
       }
-      if (nodeName === 'fetch_balance_node' && (output as any).balanceData) {
-        const { address } = (output as any).balanceData;
-        // Check if address is an object or string
-        const addressValue = typeof address === 'object' ? address.address : address;
-        ui.append(<BalanceDisplay address={addressValue} />);
+      if (nodeName == 'escrow_node' && (output as any).contractData) {
+        console.log('Contract data:', (output as any).contractData);
+        ui.append(<SmartContractDisplay contractCode={(output as any).contractData as string} />);
       }
     }
   }
