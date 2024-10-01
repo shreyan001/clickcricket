@@ -1,4 +1,8 @@
-
+import { useAccount } from 'wagmi'
+import { useState, useEffect } from 'react'
+import { formatEther } from 'viem'
+import { baseSepolia } from 'viem/chains'
+import { publicClient } from '@/walletConnect/siwe'
 
 type Asset = {
     name: string
@@ -8,32 +12,66 @@ type Asset = {
     value: number
   }
   
-  type PortfolioWalletProps = {
-    balance?: number
-    netWorth?: number
-    profit?: number
-    address?: string
-    assets?: Asset[]
-  }
-  
-  const exampleData: PortfolioWalletProps = {
-    balance: 10245.67,
-    netWorth: 15789.32,
-    profit: 12.5,
-    address: "0x1234...5678",
-    assets: [
-      { name: "Ethereum", symbol: "ETH", balance: 5.5, price: 1800, value: 9900 },
-      { name: "USD Coin", symbol: "USDC", balance: 1000, price: 1, value: 1000 },
-      { name: "Aave", symbol: "AAVE", balance: 10, price: 80, value: 800 },
-    ]
-  }
-  
-  export default function PortfolioWallet({ 
-    balance = exampleData.balance, 
-    netWorth = exampleData.netWorth, 
-    profit = exampleData.profit, 
-    assets = exampleData.assets 
-  }: PortfolioWalletProps) {
+  export default function PortfolioWallet() {
+    const { address, isConnected } = useAccount()
+
+    const [assets, setAssets] = useState<Asset[]>([])
+    const [netWorth, setNetWorth] = useState(0)
+    const [profit, setProfit] = useState(0)
+
+    useEffect(() => {
+      if (isConnected && address) {
+        fetchAssetData()
+      }
+    }, [isConnected, address])
+
+    const fetchAssetData = async () => {
+      if (!address) return
+
+      let ethPrice = 2600 // Default fallback price
+      let ethBalance = BigInt(0)
+
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+        if (!response.ok) {
+          throw new Error('Failed to fetch ETH price')
+        }
+        const data = await response.json()
+        ethPrice = data.ethereum.usd
+      } catch (error) {
+        console.error('Error fetching ETH price, using fallback:', error)
+        // We'll use the fallback price defined above
+      }
+
+      try {
+        ethBalance = await publicClient.getBalance({ address })
+      } catch (error) {
+        console.error('Error fetching balance:', error)
+      }
+
+      const ethBalanceNumber = parseFloat(formatEther(ethBalance))
+      const ethValue = ethBalanceNumber * ethPrice
+
+      const newAssets: Asset[] = [
+        {
+          name: "Ethereum",
+          symbol: "ETH",
+          balance: ethBalanceNumber,
+          price: ethPrice,
+          value: ethValue
+        }
+      ]
+
+      setAssets(newAssets)
+      setNetWorth(ethValue)
+      // For this example, we'll set a static profit. In a real app, you'd calculate this based on historical data.
+      setProfit(5.5)
+    }
+
+    if (!isConnected) {
+      return <div>Please connect your wallet</div>
+    }
+
     return (
       <div className="w-[90%] bg-black text-white font-mono p-3 rounded-lg border border-[#FFC700]">
         <h2 className="text-xl font-bold mb-3 text-[#FFC700]">Agent Resources</h2>
@@ -41,7 +79,7 @@ type Asset = {
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div>
               <p className="text-xs text-gray-400">Balance</p>
-              <p>${balance.toLocaleString()}</p>
+              <p>${netWorth.toLocaleString()}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Net Worth</p>

@@ -19,8 +19,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "AgentsGuild",
-  description: "Agents Guild is a platform to leverage AI Agents for your web3 adventures",
+  title: "EscrowGuild",
+  description: "Escrow Guild is a platform to leverage AI Agents for your web3 adventures",
 };
 
 export default function RootLayout({

@@ -12,8 +12,10 @@ import { useActions } from '@/ai/client'
 import ConnectButton from './ui/walletButton'
 import Image from 'next/image'
 import PortfolioWallet from './ui/portfolioWallet'
+import { useAccount } from 'wagmi'
 
 export function AgentsGuildInterface() {
+  const { address, isConnected } = useAccount()
   const actions = useActions<typeof EndpointsContext>();
   const [input, setInput] = useState("")
   const [history, setHistory] = useState<[role: string, content: string][]>([
@@ -31,6 +33,12 @@ export function AgentsGuildInterface() {
   }, [elements]); // This will trigger whenever elements change
 
   const handleSend = async () => {
+    if (!isConnected) {
+      // Optionally, you can show a message to the user here
+      console.log("Please connect your wallet to chat");
+      return;
+    }
+
     const newElements = [...elements];
     
     const humanMessageRef = React.createRef<HTMLDivElement>();
@@ -72,13 +80,13 @@ export function AgentsGuildInterface() {
       <nav className="flex justify-between items-center p-4 border-b border-gray-800">
         <div className="flex items-center space-x-2">
           <Image src="/guild.png" alt="Agents Guild Logo" width={35} height={35} />
-          <span className="text-xl font-bold">Agents Guild</span>
+          <span className="text-xl font-bold">Escrow Guild</span>
         </div>
        <ConnectButton/>
       </nav>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[30%] bg-[#FFC700] text-black p-4 flex flex-col">
-          <h1 className="text-3xl font-bold mb-6">Agents Guild Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-6">Escrow Guild Dashboard</h1>
           <div className="mb-6">
        <PortfolioWallet/>
           </div>
@@ -112,10 +120,11 @@ export function AgentsGuildInterface() {
             </div>
             <div className="flex items-center space-x-2">
               <Input 
-                placeholder="Search projects..." 
+                placeholder={isConnected ? "Describe your project or ask a question..." : "Connect wallet to chat"} 
                 className="bg-black text-white border-gray-800 rounded-md"
+                disabled={!isConnected}
               />
-              <Button className="bg-black text-white border border-white rounded-md px-3 py-1 text-sm hover:bg-white hover:text-black transition-colors">
+              <Button className={`bg-black text-white border border-white rounded-md px-4 py-2 text-sm hover:bg-white hover:text-black transition-colors flex items-center space-x-2 ${!isConnected && 'opacity-50 cursor-not-allowed'}`} disabled={!isConnected}>
                 <Search className="w-4 h-4" />
               </Button>
             </div>
@@ -128,15 +137,17 @@ export function AgentsGuildInterface() {
           <div className="p-4 border-t border-gray-800">
             <div className="flex space-x-2">
               <Input
-                placeholder="Describe your project or ask a question..."
+                placeholder={isConnected ? "Describe your project or ask a question..." : "Connect wallet to chat"}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                onKeyPress={(e) => e.key === 'Enter' && isConnected && handleSend()}
                 className="bg-black text-white border-gray-800 rounded-md flex-grow"
+                disabled={!isConnected}
               />
               <Button 
                 onClick={handleSend} 
-                className="bg-black text-white border border-white rounded-md px-4 py-2 text-sm hover:bg-white hover:text-black transition-colors flex items-center space-x-2"
+                className={`bg-black text-white border border-white rounded-md px-4 py-2 text-sm hover:bg-white hover:text-black transition-colors flex items-center space-x-2 ${!isConnected && 'opacity-50 cursor-not-allowed'}`}
+                disabled={!isConnected}
               >
                 <Send className="w-4 h-4" />
                 <span>Send</span>

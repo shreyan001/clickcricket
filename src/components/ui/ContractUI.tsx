@@ -19,6 +19,8 @@ export function SmartContractDisplay({ contractCode }: { contractCode: string })
   const [solidityScanResults, setSolidityScanResults] = useState<any>(null)
   const [showScanComments, setShowScanComments] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [closestContractIndex, setClosestContractIndex] = useState<number>(-1)
+  const [closestContract, setClosestContract] = useState<any>(null)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contractCode)
@@ -26,43 +28,74 @@ export function SmartContractDisplay({ contractCode }: { contractCode: string })
     setTimeout(() => setIsCopied(false), 2000)
   }
 
+  useEffect(() => {
+    let closestMatch = null;
+    let highestSimilarity = 0;
+    let matchIndex = -1;
+
+    // Loop through all contracts to find the closest match
+    for (let i = 0; i < contractsArray.length; i++) {
+      const contract = contractsArray[i];
+      const currentSimilarity = similarity(contract.contractCode, contractCode);
+      if (currentSimilarity > highestSimilarity) {
+        highestSimilarity = currentSimilarity;
+        closestMatch = contract;
+        matchIndex = i;
+      }
+    }
+
+    if (matchIndex === -1) {
+      matchIndex = 0;
+      closestMatch = contractsArray[0];
+    }
+
+    setClosestContractIndex(matchIndex);
+    setClosestContract(closestMatch);
+    
+    if (closestMatch && closestMatch.solidityScanResults) {
+      setSolidityScanResults(closestMatch.solidityScanResults);
+    }
+  }, [contractCode]);
+
   const useDeployContract = async ({ sourceCode }: { sourceCode: string }) => {
     try {
-      const contract = contractsArray.find(contract => contract.contractCode === sourceCode)
-      
-      if (!contract) {
-        throw new Error('Contract not found for the provided source code')
+      if (!closestContract) {
+        throw new Error("No matching contract found");
       }
-  
-      const { abi, bytecode, solidityScanResults } = contract
-      setSolidityScanResults(solidityScanResults)
-  
+
+      const { abi, bytecode } = closestContract;
+
+      //@ts-ignore
       const hash = await walletClient?.deployContract({
-        abi,
         //@ts-ignore
+        abi,
         bytecode,
         account: walletAddress,
         args: [],
-      })
-  
-      console.log('Contract deployed. Transaction hash:', hash)
-  
+      });
+
+      console.log('Contract deployed. Transaction hash:', hash);
+
       if (hash) {
-        const receipt = await publicClient.waitForTransactionReceipt({ hash })
-        console.log('Contract deployed at:', receipt.contractAddress)
-        return receipt.contractAddress
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        console.log('Contract deployed at:', receipt.contractAddress);
+        return { 
+          contractAddress: receipt.contractAddress, 
+          contractIndex: closestContractIndex 
+        };
       }
     } catch (error) {
-      console.error('Error deploying contract:', error)
-      throw error
+      console.error('Error deploying contract:', error);
+      throw error;
     }
   }
 
   const useHandleDeploy = async () => {
     setIsLoading(true)
-    const hashaddress = await useDeployContract({ sourceCode: contractsArray[0].contractCode })
+    const hashaddress = await useDeployContract({ sourceCode: contractCode })
 
     if (hashaddress) {
+      //@ts-ignore
       setDeployedAddress(hashaddress)
       setShowCode(false)
       setIsDeployed(true)
@@ -74,13 +107,6 @@ export function SmartContractDisplay({ contractCode }: { contractCode: string })
     setShowCode(!showCode)
   }
  
-  useEffect(() => {
-    const contract = contractsArray.find(contract => contract.contractCode === contractsArray[0].contractCode)
-    if (contract && contract.solidityScanResults) {
-      setSolidityScanResults(contract.solidityScanResults)
-    }
-  }, [contractCode])
-
   const roundedSecurityScore = Math.round(solidityScanResults?.securityScore || 0);
   const roundedThreatScore = Math.round(solidityScanResults?.threatScore || 0);
 
@@ -103,7 +129,7 @@ export function SmartContractDisplay({ contractCode }: { contractCode: string })
         {showCode && (
           <ScrollArea className="h-96 w-full border border-white rounded-md p-2">
             <pre className="text-sm">
-              <code>{contractsArray[0].contractCode}</code>
+              <code>{contractCode}</code>
             </pre>
           </ScrollArea>
         )}
@@ -223,4 +249,41 @@ export function SmartContractDisplay({ contractCode }: { contractCode: string })
 )}
     </div>
   )
+}
+
+// Helper function to calculate similarity between two strings
+function similarity(s1: string, s2: string): number {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  const longerLength = longer.length;
+  if (longerLength === 0) {
+    return 1.0;
+  }
+  return (longerLength - editDistance(longer, shorter)) / longerLength;
+}
+
+// Helper function to calculate edit distance between two strings
+function editDistance(s1: string, s2: string): number {
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
+  const costs = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) {
+        costs[j] = j;
+      } else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        }
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
+      }
+    }
+    if (i > 0) {
+      costs[s2.length] = lastValue;
+    }
+  }
+  return costs[s2.length];
 }

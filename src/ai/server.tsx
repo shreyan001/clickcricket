@@ -13,30 +13,35 @@ export async function streamRunnableUI({ chat_history, input }: { chat_history?:
   const stream = await graph.stream({ 
     input,
     chat_history,
-  });
+  },{
+    streamMode:"updates",
+  },);
 
   const ui = createStreamableUI();
 
   for await (const value of stream) {
     
     
+    for (const [nodeName, values] of Object.entries(value)) {
+     
+    
    
-    const [nodeName, output] = Object.entries(value)[0];
-    console.log('Node name:', nodeName);
-    console.log('Output:', JSON.stringify(output, null, 2));
-
-    // Add a loading indicator when the stream starts
+    
+   // Add a loading indicator when the stream starts
     if (nodeName === 'initial_node') {
       ui.append(<div className="animate-pulse bg-gray-300 rounded-md p-2 w-24 h-6"></div>);
     }
-    if (nodeName !== 'end') {
-      if ((output as { result?: string }).result) {
-        ui.update(<AIMessageText content={(output as { result: string }).result} />);
+if (nodeName !== 'end') {
+      if ((values as { result?: string }).result) {
+        ui.update(<AIMessageText content={(values as { result: string }).result} />);
       }
-      if (nodeName == 'escrow_node' && (output as any).contractData) {
-        console.log('Contract data:', (output as any).contractData);
-        ui.append(<SmartContractDisplay contractCode={(output as any).contractData as string} />);
+   
+      if (nodeName == 'escrow_node' && (values as any).contractData) {
+        console.log('Contract data:', (values as any).contractData);
+        ui.append(<SmartContractDisplay contractCode={(values as any).contractData as string} />);
       }
+    }
+    
     }
   }
 
