@@ -8,7 +8,7 @@ EscrowGuild is a cutting-edge platform specializing in secure and efficient escr
 - **AI-Powered Assistance**: Utilizes advanced language models for user interaction and contract customization.
 - **Gaianet Integration**: Leverages Gaianet public nodes for enhanced performance and reliability.
 
-[![Watch the video]()](https://www.youtube.com/watch?v=Djr_G-ciPNE)
+[![Watch the video](https://img.youtube.com/vi/Djr_G-ciPNE/0.jpg)](https://www.youtube.com/watch?v=Djr_G-ciPNE)
 
 
 ## Getting Started
