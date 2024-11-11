@@ -1,9 +1,9 @@
-import { AgentsGuildInterface } from "../components/AgentsGuild";
+  import { ClickCricketInterface } from "../components/ClickCricket";  
 
 export default function Home() {
   return (
     <>
-      <AgentsGuildInterface />
+      <ClickCricketInterface />
       </>
   );
 }
