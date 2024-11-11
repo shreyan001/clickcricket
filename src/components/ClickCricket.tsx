@@ -1,20 +1,11 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Search, Wallet } from 'lucide-react'
-import { AIMessageText, HumanMessageText } from "@/components/ui/message"
-import { EndpointsContext } from '@/app/agent'
-import { useActions } from '@/ai/client'
-import ConnectButton from './ui/walletButton'
-import Image from 'next/image'
-import PortfolioWallet from './ui/portfolioWallet'
-import { useAccount } from 'wagmi'
 
-export function AgentsGuildInterface() {
+import { useAccount } from 'wagmi'
+import { useArweaveWallet } from "arweave-wallet-kit";
+
+export function ClickCricketInterface() {
   const { address, isConnected } = useAccount()
   const actions = useActions<typeof EndpointsContext>();
   const [input, setInput] = useState("")
@@ -25,6 +16,13 @@ export function AgentsGuildInterface() {
   const [elements, setElements] = useState<JSX.Element[]>([]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const [score, setScore] = useState(0);
+  const [wickets, setWickets] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [currentBall, setCurrentBall] = useState(0);
+
+  const { connected, address: arweaveAddress } = useArweaveWallet();
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -75,87 +73,82 @@ export function AgentsGuildInterface() {
     }, 2000);
   };
 
+  const handleClick = async () => {
+    if (!connected) {
+      console.log("Please connect your Arweave wallet to play");
+      return;
+    }
+    
+    if (gameOver) return;
+    
+    const runs = Math.floor(Math.random() * 7); // 0-6 runs
+    
+    if (runs === 0) {
+      setWickets(prev => prev + 1);
+      if (wickets >= 9) {
+        setGameOver(true);
+      }
+    } else {
+      setScore(prev => prev + runs);
+    }
+    
+    setCurrentBall(prev => (prev + 1) % 6);
+    
+    // You can now use the address for game state persistence
+    console.log("Player address:", arweaveAddress);
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-black text-white font-mono">
-      <nav className="flex justify-between items-center p-4 border-b border-gray-800">
+    <div className="flex flex-col h-screen bg-green-800 text-white font-mono">
+      <nav className="flex justify-between items-center p-4 border-b border-green-700">
         <div className="flex items-center space-x-2">
-          <Image src="/guild.png" alt="Agents Guild Logo" width={35} height={35} />
-          <span className="text-xl font-bold">Escrow Guild</span>
+          <span className="text-xl font-bold">Click Cricket</span>
         </div>
-       <ConnectButton/>
+        <ConnectButton 
+          showBalance={false}
+          className="bg-green-600 hover:bg-green-500 transition-colors"
+        />
       </nav>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-[30%] bg-[#FFC700] text-black p-4 flex flex-col">
-          <h1 className="text-3xl font-bold mb-6">Escrow Guild Dashboard</h1>
-          <div className="mb-6">
-       <PortfolioWallet/>
-          </div>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-2">Recent Projects</h2>
-            <ul className="space-y-2">
-              {["Next.js Integration", "DeFi Market Analysis", "OpenAI SDK Implementation"].map((project, index) => (
-                <li key={index} className="bg-black text-white p-2">
-                  {project}
-                </li>
-              ))}
-            </ul>
+      
+      <div className="flex-1 flex">
+        {/* Scoreboard */}
+        <div className="w-[30%] bg-green-900 p-4 flex flex-col">
+          <h1 className="text-3xl font-bold mb-6">Scoreboard</h1>
+          <div className="space-y-4">
+            <div className="text-2xl">
+              <p>Score: {score}</p>
+              <p>Wickets: {wickets}/10</p>
+              <p>Ball: {currentBall}/6</p>
+            </div>
           </div>
         </div>
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
-            <div className="flex items-center space-x-2">
-              <Button className="bg-black text-white border border-white rounded-md px-3 py-1 text-sm hover:bg-white hover:text-black transition-colors">
-                Menu
-              </Button>
-              <Select>
-                <SelectTrigger className="w-[200px] bg-black text-white border border-white rounded-md">
-                  <SelectValue placeholder="Select Project" />
-                </SelectTrigger>
-                <SelectContent className="bg-black text-white border-gray-800">
-                  <SelectItem value="current">Current Project</SelectItem>
-                  <SelectItem value="nextjs">Next.js Integration</SelectItem>
-                  <SelectItem value="defi">DeFi Analysis</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Input 
-                placeholder={isConnected ? "Describe your project or ask a question..." : "Connect wallet to chat"} 
-                className="bg-black text-white border-gray-800 rounded-md"
-                disabled={!isConnected}
-              />
-              <Button className={`bg-black text-white border border-white rounded-md px-4 py-2 text-sm hover:bg-white hover:text-black transition-colors flex items-center space-x-2 ${!isConnected && 'opacity-50 cursor-not-allowed'}`} disabled={!isConnected}>
-                <Search className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-100px)]">
-            <div className="flex flex-col w-full gap-1 p-4">
-             {elements}
-            </div>
-          </ScrollArea>
-          <div className="p-4 border-t border-gray-800">
-            <div className="flex space-x-2">
-              <Input
-                placeholder={isConnected ? "Describe your project or ask a question..." : "Connect wallet to chat"}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && isConnected && handleSend()}
-                className="bg-black text-white border-gray-800 rounded-md flex-grow"
-                disabled={!isConnected}
-              />
-              <Button 
-                onClick={handleSend} 
-                className={`bg-black text-white border border-white rounded-md px-4 py-2 text-sm hover:bg-white hover:text-black transition-colors flex items-center space-x-2 ${!isConnected && 'opacity-50 cursor-not-allowed'}`}
-                disabled={!isConnected}
-              >
-                <Send className="w-4 h-4" />
-                <span>Send</span>
-              </Button>
-            </div>
-          </div>
+
+        {/* Game Area */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <button
+            onClick={handleClick}
+            disabled={gameOver}
+            className="bg-white text-green-800 rounded-full w-32 h-32 text-xl font-bold
+                     hover:bg-green-100 transition-colors disabled:opacity-50"
+          >
+            {gameOver ? "Game Over!" : "Click to Bat!"}
+          </button>
+          
+          {gameOver && (
+            <button
+              onClick={() => {
+                setScore(0);
+                setWickets(0);
+                setGameOver(false);
+                setCurrentBall(0);
+              }}
+              className="mt-4 bg-green-600 px-4 py-2 rounded hover:bg-green-500"
+            >
+              New Game
+            </button>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }
