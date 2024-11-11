@@ -1,55 +1,61 @@
-# EscrowGuild
+# ClickCricket
 
-EscrowGuild is a cutting-edge platform specializing in secure and efficient escrow services within the Web3 ecosystem. This project is built using [Next.js](https://nextjs.org), langchain, langgraph, gaianet and leverages advanced AI models for smart contract generation and user interaction.
+ClickCricket is a decentralized hand-cricket game built on Arweave using Next.js, LangGraph, and AO (Arweave Operations). The game combines traditional hand cricket rules with blockchain technology and AI-powered gameplay.
 
 ## Key Features
 
-- **Smart Contract Generation**: Automated creation of escrow smart contracts for various asset exchanges (ETH, ERC20 tokens, NFTs).
-- **AI-Powered Assistance**: Utilizes advanced language models for user interaction and contract customization.
-- **Gaianet Integration**: Leverages Gaianet public nodes for enhanced performance and reliability.
+- **Decentralized Gaming**: Built on Arweave blockchain for transparent and persistent gameplay
+- **AI-Powered Opponent**: Uses Groq/Phi model through Gaianet for intelligent game decisions
+- **Dual Wallet Support**: Integrates both Arweave and Ethereum wallets
+- **Real-time Scoring**: Live updates of score, wickets, and balls
+- **State Management**: Persistent game state using AO processes
 
-[![Watch the video](https://img.youtube.com/vi/Djr_G-ciPNE/0.jpg)](https://www.youtube.com/watch?v=Djr_G-ciPNE)
+## Technology Stack
 
+- **Frontend**: Next.js with TypeScript
+- **Blockchain**: 
+  - Arweave (primary chain)
+  - Ethereum (secondary support)
+- **AI Integration**:
+  - Phi model via Gaianet
+  - LangGraph for game flow
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Game Rules
 
-## AI Models
+- Click to bat and score runs (1-6)
+- Avoid matching the AI's number to prevent getting out
+- Game ends after 10 wickets
+- Score as many runs as possible before getting out
 
-EscrowGuild utilizes the following AI models:
+## Architecture
 
-- **YiCoder**: A powerful code generation model used for smart contract creation.
-- **Phi-small**: An efficient chat model for user interactions and query processing.
+### Frontend Components
+- `ClickCricket.tsx`: Main game interface
+- `ConnectButton`: Wallet connection component
+- Scoreboard and game controls
 
-These models are accessed through Gaianet public nodes, ensuring fast and reliable performance.
-
-## Learn More
-
-To learn more about the technologies used in this project:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Gaianet](https://gaianet.network/) - explore Gaianet's public AI nodes.
-- [EscrowGuild Docs](https://docs.escrowguild.com) - detailed documentation on our escrow services and smart contracts.
+### Backend Integration
+- AO Process handlers for game state
+- LangGraph for game flow management
+- AI integration for opponent moves
 
 ## Contributing
 
-We welcome contributions! Please see our [Contribution Guidelines](CONTRIBUTING.md) for more information on how to get involved.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
-## Deployment
+## License
 
-EscrowGuild can be easily deployed on various platforms. For optimal performance, we recommend using services that support edge computing and are compatible with Next.js.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Check out our [deployment documentation](https://docs.escrowguild.com/deployment) for detailed instructions.
+## Acknowledgments
+
+- Arweave ecosystem
+- Gaianet for AI model access
+- LangChain community
+- AO framework developers
+
+## Contact
+
+For questions and support, please open an issue in the GitHub repository or contact the maintainers.
